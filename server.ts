@@ -63,7 +63,7 @@ app.use(
 		extended: true,
 	}),
 );
-app.use('/public', express.static(path.resolve(__dirname, 'public')));
+app.use('/public', express.static(path.resolve(__dirname, '../public')));
 app.use('/api/v1', router);
 
 server.listen(PORT, () => {
