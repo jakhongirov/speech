@@ -43,7 +43,7 @@ const options = {
 		},
 		servers: [
 			{
-				url: 'https://speech.admob.uz/api/v1',
+				url: 'https://speech.aiseller.uz/api/v1',
 			},
 		],
 	},
