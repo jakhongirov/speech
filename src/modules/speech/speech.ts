@@ -58,7 +58,7 @@ const STT = async (req: Request, res: Response) => {
 					`../../../../public/audios/tts_${Date.now()}.mp3`,
 				);
 				const edge = new EdgeTTS({
-					voice: 'uz-UZ-MadinaNeural',
+					voice: 'uz-UZ-SardorNeural',
 					outputFormat: 'audio-24khz-48kbitrate-mono-mp3',
 				});
 
@@ -95,7 +95,7 @@ const TTS = async (req: Request, res: Response) => {
 
 		const tts = new EdgeTTS({
 			// voice: "uz-UZ-SardorNeural"
-			voice: 'uz-UZ-MadinaNeural',
+			voice: 'uz-UZ-SardorNeural',
 			outputFormat: 'audio-24khz-48kbitrate-mono-mp3',
 		});
 
