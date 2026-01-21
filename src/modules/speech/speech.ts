@@ -7,35 +7,12 @@ import { dirname } from 'path';
 import { execSync } from 'child_process';
 import { Model, Recognizer } from 'vosk';
 import wav from 'wav';
-import { EdgeTTS } from 'node-edge-tts';
+import { MsEdgeTTS, OUTPUT_FORMAT } from 'msedge-tts';
 
 dotenv.config();
 
 export const __filename = fileURLToPath(import.meta.url);
 export const __dirname = dirname(__filename);
-
-// Retry utility for EdgeTTS to handle 403 errors
-const retryTTS = async (
-	edge: EdgeTTS,
-	text: string,
-	outputFile: string,
-	maxRetries: number = 3,
-): Promise<void> => {
-	for (let attempt = 1; attempt <= maxRetries; attempt++) {
-		try {
-			await edge.ttsPromise(text, outputFile);
-			return;
-		} catch (error: any) {
-			const is403 = error?.message?.includes('403');
-			if (is403 && attempt < maxRetries) {
-				console.log(`TTS attempt ${attempt} failed with 403, retrying in ${attempt * 2}s...`);
-				await new Promise((resolve) => setTimeout(resolve, attempt * 2000));
-				continue;
-			}
-			throw error;
-		}
-	}
-};
 
 const MODEL_PATH = path.resolve(
 	__dirname,
@@ -51,6 +28,22 @@ if (!fs.existsSync(MODEL_PATH)) {
 }
 
 if (!fs.existsSync(UPLOADS_DIR)) fs.mkdirSync(UPLOADS_DIR);
+
+// Helper function to generate TTS audio using msedge-tts
+const generateTTS = async (text: string, outputFile: string): Promise<void> => {
+	const tts = new MsEdgeTTS();
+	await tts.setMetadata('uz-UZ-SardorNeural', OUTPUT_FORMAT.AUDIO_24KHZ_48KBITRATE_MONO_MP3);
+
+	const { audioStream } = tts.toStream(text);
+	const writeStream = fs.createWriteStream(outputFile);
+
+	return new Promise((resolve, reject) => {
+		audioStream.pipe(writeStream);
+		writeStream.on('finish', resolve);
+		writeStream.on('error', reject);
+		audioStream.on('error', reject);
+	});
+};
 
 const STT = async (req: Request, res: Response) => {
 	try {
@@ -80,16 +73,8 @@ const STT = async (req: Request, res: Response) => {
 					__dirname,
 					`../../../../public/audios/tts_${Date.now()}.mp3`,
 				);
-				const edge = new EdgeTTS({
-					voice: 'uz-UZ-SardorNeural',
-					outputFormat: 'audio-24khz-48kbitrate-mono-mp3',
-				});
 
-				await retryTTS(
-					edge,
-					result.text || 'No speech detected',
-					outputFile,
-				);
+				await generateTTS(result.text || 'No speech detected', outputFile);
 
 				res.json({
 					status: 200,
@@ -102,7 +87,7 @@ const STT = async (req: Request, res: Response) => {
 		console.log(error);
 		res.status(500).json({
 			status: 500,
-			message: 'Interval Server Error',
+			message: 'Internal Server Error',
 		});
 		return;
 	}
@@ -117,13 +102,7 @@ const TTS = async (req: Request, res: Response) => {
 			`../../../../public/audios/${audioFile}`,
 		);
 
-		const tts = new EdgeTTS({
-			// voice: "uz-UZ-SardorNeural"
-			voice: 'uz-UZ-SardorNeural',
-			outputFormat: 'audio-24khz-48kbitrate-mono-mp3',
-		});
-
-		await retryTTS(tts, text, outputFile);
+		await generateTTS(text, outputFile);
 
 		res.status(200).json({
 			text: text,
@@ -134,7 +113,7 @@ const TTS = async (req: Request, res: Response) => {
 		console.log(error);
 		res.status(500).json({
 			status: 500,
-			message: 'Interval Server Error',
+			message: 'Internal Server Error',
 		});
 		return;
 	}
