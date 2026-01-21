@@ -1,3 +1,7 @@
+import crypto from 'crypto';
+// @ts-ignore - Polyfill for older Node.js versions
+globalThis.crypto = crypto as any;
+
 import 'dotenv/config';
 import express from 'express';
 import http from 'http';
