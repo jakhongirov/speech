@@ -14,6 +14,29 @@ dotenv.config();
 export const __filename = fileURLToPath(import.meta.url);
 export const __dirname = dirname(__filename);
 
+// Retry utility for EdgeTTS to handle 403 errors
+const retryTTS = async (
+	edge: EdgeTTS,
+	text: string,
+	outputFile: string,
+	maxRetries: number = 3,
+): Promise<void> => {
+	for (let attempt = 1; attempt <= maxRetries; attempt++) {
+		try {
+			await edge.ttsPromise(text, outputFile);
+			return;
+		} catch (error: any) {
+			const is403 = error?.message?.includes('403');
+			if (is403 && attempt < maxRetries) {
+				console.log(`TTS attempt ${attempt} failed with 403, retrying in ${attempt * 2}s...`);
+				await new Promise((resolve) => setTimeout(resolve, attempt * 2000));
+				continue;
+			}
+			throw error;
+		}
+	}
+};
+
 const MODEL_PATH = path.resolve(
 	__dirname,
 	'../../../../vosk-model-small-uz-0.22',
@@ -62,7 +85,8 @@ const STT = async (req: Request, res: Response) => {
 					outputFormat: 'audio-24khz-48kbitrate-mono-mp3',
 				});
 
-				await edge.ttsPromise(
+				await retryTTS(
+					edge,
 					result.text || 'No speech detected',
 					outputFile,
 				);
@@ -99,7 +123,7 @@ const TTS = async (req: Request, res: Response) => {
 			outputFormat: 'audio-24khz-48kbitrate-mono-mp3',
 		});
 
-		await tts.ttsPromise(text, outputFile);
+		await retryTTS(tts, text, outputFile);
 
 		res.status(200).json({
 			text: text,
