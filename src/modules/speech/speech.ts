@@ -5,7 +5,7 @@ import path from 'path';
 import { fileURLToPath } from 'url';
 import { dirname } from 'path';
 import { execSync } from 'child_process';
-import { Model, Recognizer } from 'vosk';
+import { Model, Recognizer } from '../../lib/vosk-koffi.js';
 import wav from 'wav';
 import { ttsSave } from 'edge-tts';
 
@@ -20,12 +20,12 @@ const MODEL_PATH = path.resolve(
 );
 const UPLOADS_DIR = path.resolve(__dirname, '../../../../public/audios');
 
-const model = new Model(MODEL_PATH);
-
 if (!fs.existsSync(MODEL_PATH)) {
 	console.error('Model not found:', MODEL_PATH);
 	process.exit(1);
 }
+
+const model = new Model(MODEL_PATH);
 
 if (!fs.existsSync(UPLOADS_DIR)) fs.mkdirSync(UPLOADS_DIR);
 
