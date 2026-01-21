@@ -6,7 +6,7 @@
 	"main": "sever.js",
 	"scripts": {
 		"dev": "nodemon dist/server.js",
-		"build": "tsc",
+		"build": "npx tsc",
 		"start": "node dist/server.js"
 	},
 	"keywords": [],
