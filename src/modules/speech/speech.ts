@@ -7,7 +7,7 @@ import { dirname } from 'path';
 import { execSync } from 'child_process';
 import { Model, Recognizer } from 'vosk';
 import wav from 'wav';
-import { MsEdgeTTS, OUTPUT_FORMAT } from 'msedge-tts';
+import { ttsSave } from 'edge-tts';
 
 dotenv.config();
 
@@ -29,20 +29,25 @@ if (!fs.existsSync(MODEL_PATH)) {
 
 if (!fs.existsSync(UPLOADS_DIR)) fs.mkdirSync(UPLOADS_DIR);
 
-// Helper function to generate TTS audio using msedge-tts
-const generateTTS = async (text: string, outputFile: string): Promise<void> => {
-	const tts = new MsEdgeTTS();
-	await tts.setMetadata('uz-UZ-SardorNeural', OUTPUT_FORMAT.AUDIO_24KHZ_48KBITRATE_MONO_MP3);
-
-	const { audioStream } = tts.toStream(text);
-	const writeStream = fs.createWriteStream(outputFile);
-
-	return new Promise((resolve, reject) => {
-		audioStream.pipe(writeStream);
-		writeStream.on('finish', resolve);
-		writeStream.on('error', reject);
-		audioStream.on('error', reject);
-	});
+// Helper function to generate TTS audio with retry logic
+const generateTTS = async (text: string, outputFile: string, maxRetries = 3): Promise<void> => {
+	for (let attempt = 1; attempt <= maxRetries; attempt++) {
+		try {
+			await ttsSave(text, outputFile, {
+				voice: 'uz-UZ-SardorNeural',
+			});
+			return;
+		} catch (error: any) {
+			console.error(`TTS attempt ${attempt} failed:`, error?.message || error);
+			if (attempt < maxRetries) {
+				const delay = attempt * 3000;
+				console.log(`Retrying in ${delay}ms...`);
+				await new Promise(res => setTimeout(res, delay));
+			} else {
+				throw error;
+			}
+		}
+	}
 };
 
 const STT = async (req: Request, res: Response) => {
